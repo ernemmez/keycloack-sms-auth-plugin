@@ -1,0 +1,11 @@
+.idea
+*.iml
+target
+copy.sh
+dependency-reduced-pom.xml
+.classpath
+.project
+.settings
+.jpb
+
+h2db/*.db
