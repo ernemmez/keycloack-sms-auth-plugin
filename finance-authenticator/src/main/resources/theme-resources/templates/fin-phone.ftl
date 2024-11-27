@@ -3,6 +3,10 @@
     <#if section = "header">
         ${msg("phoneLoginTitle")}
     <#elseif section = "form">
+        <#if enableCaptcha?? && enableCaptcha>
+            <script src="https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}" async defer></script>
+        </#if>
+        
         <form id="kc-phone-login-form" action="${url.loginAction}" method="post">
             <input type="hidden" name="redirect_uri" value="${redirectUri}">
             <div class="form-group">
@@ -13,6 +17,13 @@
                 <label for="password">${msg("password")}</label>
                 <input type="password" id="password" name="password" class="form-control" required />
             </div>
+            
+            <#if enableCaptcha?? && enableCaptcha>
+                <div class="form-group">
+                    <div class="g-recaptcha" data-sitekey="${recaptchaSiteKey}"></div>
+                </div>
+            </#if>
+            
             <div class="form-group">
                 <button type="submit" class="btn btn-primary btn-block btn-lg">
                     ${msg("doSubmit")}

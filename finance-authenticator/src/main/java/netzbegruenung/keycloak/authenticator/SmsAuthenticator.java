@@ -45,9 +45,15 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		RealmModel realm = context.getRealm();
 		
 		String redirectUri = context.getAuthenticationSession().getRedirectUri();
+		
+		boolean enableCaptcha = Boolean.parseBoolean(config.getConfig().getOrDefault("enableCaptcha", "false"));
+		String recaptchaSiteKey = config.getConfig().get("recaptchaSiteKey");
+		
 		context.challenge(context.form()
 			.setAttribute("realm", realm)
 			.setAttribute("redirectUri", redirectUri)
+			.setAttribute("enableCaptcha", enableCaptcha)
+			.setAttribute("recaptchaSiteKey", recaptchaSiteKey)
 			.createForm(TPL_CODE));
 	}
 
