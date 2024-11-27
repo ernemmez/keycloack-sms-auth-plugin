@@ -70,7 +70,12 @@ public class SmsAuthCredentialProvider implements CredentialProvider<SmsAuthCred
     @Override
     public boolean isConfiguredFor(RealmModel realm, UserModel user, String credentialType) {
         if (!supportsCredentialType(credentialType)) return false;
-        return user.credentialManager().getStoredCredentialsByTypeStream(credentialType).findAny().isPresent();
+        
+        // Hem credential hem de attribute kontrolü yap
+        boolean hasCredential = user.credentialManager().getStoredCredentialsByTypeStream(credentialType).findAny().isPresent();
+        String mobileNumber = user.getFirstAttribute("mobile_number");
+        
+        return hasCredential && mobileNumber != null && !mobileNumber.isEmpty();
     }
 
     @Override

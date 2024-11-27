@@ -77,7 +77,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		
 		try {
 			// Kullanıcı var mı kontrol et
-			 UserModel existingUser = context.getSession().users().getUserByUsername(context.getRealm(), normalizedPhone);
+			UserModel existingUser = context.getSession().users().getUserByUsername(context.getRealm(), normalizedPhone);
 			if (existingUser != null) {
 				// Kullanıcının zorunlu bilgileri var mı kontrol et
 				String firstName = existingUser.getFirstName();
@@ -111,7 +111,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			newUser.setSingleAttribute("phoneNumber", normalizedPhone);
 			
 			// Yeni kullanıcı için OTP gönder
-			 sendOtpAndRedirect(context, newUser, normalizedPhone);
+			sendOtpAndRedirect(context, newUser, normalizedPhone);
 
 		} catch (Exception e) {
 			logger.error("Kullanıcı kaydı veya SMS gönderme hatası", e);
@@ -136,8 +136,15 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		}
 
 		if (enteredCode.equals(expectedCode) && Long.parseLong(ttl) > System.currentTimeMillis()) {
-			// OTP doğrulama başarılı, kullanıcı detay formuna yönlendir
-			context.success();
+			// OTP doğrulaması başarılı, kullanıcıyı bul ve oturumu başlat
+			UserModel user = context.getSession().users().getUserByUsername(context.getRealm(), username);
+			if (user != null) {
+				context.setUser(user);
+				context.success();
+			} else {
+				context.failureChallenge(AuthenticationFlowError.INVALID_USER,
+					context.form().setError("userNotFound").createErrorPage(Response.Status.BAD_REQUEST));
+			}
 		} else {
 			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
 				context.form()
@@ -206,6 +213,6 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public SmsAuthCredentialProvider getCredentialProvider(KeycloakSession session) {
-		return session.getProvider(SmsAuthCredentialProvider.class);
+		return (SmsAuthCredentialProvider) session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
 	}
 }
