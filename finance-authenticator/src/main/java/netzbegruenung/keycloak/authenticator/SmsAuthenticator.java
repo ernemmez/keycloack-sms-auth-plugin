@@ -53,6 +53,24 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
+		// Form verilerini al
+		String formFirstName = context.getHttpRequest().getDecodedFormParameters().getFirst("firstName");
+		String formLastName = context.getHttpRequest().getDecodedFormParameters().getFirst("lastName");
+		String formEmail = context.getHttpRequest().getDecodedFormParameters().getFirst("email");
+
+		// Eğer form detayları gönderildiyse
+		if (formFirstName != null && formLastName != null && formEmail != null) {
+			// Kullanıcı detaylarını güncelle
+			UserModel user = context.getUser();
+			user.setFirstName(formFirstName);
+			user.setLastName(formLastName);
+			user.setEmail(formEmail);
+			
+			// auth et akış biter
+			context.success();
+			return;
+		}
+
 		// OTP doğrulama kontrolü
 		if (context.getHttpRequest().getDecodedFormParameters().containsKey("code")) {
 			handleOtpVerification(context);
@@ -87,7 +105,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 				if (firstName != null && !firstName.isEmpty() && 
 					lastName != null && !lastName.isEmpty() && 
 					email != null && !email.isEmpty()) {
-					// Tüm bilgiler varsa login sayfasına yönlendir
+					// Tm bilgiler varsa login sayfasına yönlendir
 					context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
 						context.form()
 							.setError("userAlreadyExistsWithDetails")
@@ -136,11 +154,12 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		}
 
 		if (enteredCode.equals(expectedCode) && Long.parseLong(ttl) > System.currentTimeMillis()) {
-			// OTP doğrulaması başarılı, kullanıcıyı bul ve oturumu başlat
+			// OTP doğrulaması başarılı, kullanıcıyı bul ve detay formuna yönlendir
 			UserModel user = context.getSession().users().getUserByUsername(context.getRealm(), username);
 			if (user != null) {
 				context.setUser(user);
-				context.success();
+				context.challenge(context.form()
+					.createForm("register-detail.ftl"));
 			} else {
 				context.failureChallenge(AuthenticationFlowError.INVALID_USER,
 					context.form().setError("userNotFound").createErrorPage(Response.Status.BAD_REQUEST));
