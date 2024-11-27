@@ -14,7 +14,15 @@
             </div>
             <div class="form-group">
                 <label for="email">${msg("email")}</label>
-                <input type="email" id="email" name="email" class="form-control" required />
+                <input type="email" 
+                       id="email" 
+                       name="email" 
+                       class="form-control" 
+                       pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                       required />
+                <#if messagesPerField.existsError('email')>
+                    <span class="error">${messagesPerField.get('email')}</span>
+                </#if>
             </div>
             <div class="form-group">
                 <button type="submit" class="btn btn-primary btn-block btn-lg">

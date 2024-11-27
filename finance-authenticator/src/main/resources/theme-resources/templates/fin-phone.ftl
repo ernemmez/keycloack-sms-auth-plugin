@@ -8,7 +8,9 @@
         </#if>
         
         <form id="kc-phone-login-form" action="${url.loginAction}" method="post">
-            <input type="hidden" name="redirect_uri" value="${redirectUri}">
+            <#if redirectUri??>
+                <input type="hidden" name="redirectUri" value="${redirectUri}">
+            </#if>
             <div class="form-group">
                 <label for="phone_number">${msg("phoneNumber")}</label>
                 <input type="tel" id="phone_number" name="phone_number" class="form-control" required />
