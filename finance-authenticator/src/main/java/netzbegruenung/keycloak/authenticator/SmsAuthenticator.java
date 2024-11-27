@@ -1,7 +1,4 @@
 package netzbegruenung.keycloak.authenticator;
-
-import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialData;
-import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
 
 import org.jboss.logging.Logger;
@@ -12,27 +9,21 @@ import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.SecretGenerator;
-import org.keycloak.credential.CredentialInput;
-import org.keycloak.models.credential.PasswordCredentialModel;
-import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
-import org.keycloak.util.JsonSerialization;
 import org.keycloak.credential.CredentialProvider;
-import org.keycloak.models.credential.dto.PasswordCredentialData;
-import org.keycloak.models.credential.dto.PasswordSecretData;
 import org.keycloak.models.UserCredentialModel;
 
 import jakarta.ws.rs.core.Response;
 import java.util.Locale;
-import java.util.Optional;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
@@ -66,6 +57,11 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 		// Eğer form detayları gönderildiyse
 		if (formFirstName != null && formLastName != null && formEmail != null) {
+			// Email kontrolü
+			if (!isValidEmail(formEmail, context)) {
+				return;
+			}
+			
 			// Kullanıcı detaylarını güncelle
 			UserModel user = context.getUser();
 			user.setFirstName(formFirstName);
@@ -88,18 +84,21 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		String password = context.getHttpRequest().getDecodedFormParameters().getFirst("password");
 
 		if (phoneNumber == null || phoneNumber.isEmpty() || password == null || password.isEmpty()) {
+			String redirectUri = context.getAuthenticationSession() != null ? 
+				context.getAuthenticationSession().getRedirectUri() : null;
+				
 			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
 				context.form()
 					.setAttribute("realm", context.getRealm())
+					.setAttribute("redirectUri", redirectUri)
 					.setError("smsAuthInvalidInput")
 					.createForm(TPL_CODE));
 			return;
 		}
 
-		// Telefon numarasını normalize et
-		String normalizedPhone = normalizePhoneNumber(phoneNumber);
-		
 		try {
+			String normalizedPhone = normalizePhoneNumber(phoneNumber);
+
 			// Kullanıcı var mı kontrol et
 			UserModel existingUser = context.getSession().users().getUserByUsername(context.getRealm(), normalizedPhone);
 			if (existingUser != null) {
@@ -111,11 +110,16 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 				if (firstName != null && !firstName.isEmpty() && 
 					lastName != null && !lastName.isEmpty() && 
 					email != null && !email.isEmpty()) {
-					// Tm bilgiler varsa login sayfasına yönlendir
+					// Kullanıcı zaten kayıtlı ve tüm bilgileri var
 					context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
 						context.form()
+							.setAttribute("realm", context.getRealm())
+							.setAttribute("auth", true)
+							.setAttribute("login", new LoginBean(phoneNumber))  // Telefon numarasını username olarak set et
+							.setAttribute("social", Boolean.FALSE)
+							.setAttribute("registrationDisabled", Boolean.FALSE)
 							.setError("userAlreadyExistsWithDetails")
-							.createForm("login.ftl")); // Keycloak'un standart login formu
+							.createForm("login.ftl")); 
 					return;
 				} else {
 					// Eksik bilgiler varsa OTP gönder
@@ -137,6 +141,13 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			// Yeni kullanıcı için OTP gönder
 			sendOtpAndRedirect(context, newUser, normalizedPhone);
 
+		} catch (IllegalArgumentException e) {
+			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
+				context.form()
+					.setAttribute("realm", context.getRealm())
+					.setError("numberFormatNumberInvalid")
+					.createForm(TPL_CODE));
+			return;
 		} catch (Exception e) {
 			logger.error("Kullanıcı kaydı veya SMS gönderme hatası", e);
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
@@ -179,11 +190,30 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	}
 
 	private String normalizePhoneNumber(String phoneNumber) {
-		// Telefon numarasını temizle ve normalize et
+		// Telefon numarasından boşluk, tire gibi karakterleri temizle
 		String normalized = phoneNumber.replaceAll("[^0-9+]", "");
-		if (!normalized.startsWith("+")) {
-			normalized = "+90" + normalized; // Türkiye için varsayılan
+		
+		// Eğer +90 ile başlamıyorsa ekle
+		if (!normalized.startsWith("+90")) {
+			normalized = "+90" + normalized;
 		}
+		
+		// +90 dahil toplam uzunluk kontrolü (13 karakter olmalı)
+		if (normalized.length() != 13) {
+			throw new IllegalArgumentException("Geçersiz telefon numarası uzunluğu. Örnek format: +905321234567");
+		}
+		
+		// +90'dan sonraki kısmın uzunluk kontrolü (10 karakter olmalı)
+		String numberWithoutPrefix = normalized.substring(3); // +90 kısmını çıkar
+		if (numberWithoutPrefix.length() != 10) {
+			throw new IllegalArgumentException("Telefon numarası +90 hariç 10 haneli olmalıdır");
+		}
+		
+		// İlk rakam 5 ile başlamalı (Türkiye mobil numaraları için)
+		if (!numberWithoutPrefix.startsWith("5")) {
+			throw new IllegalArgumentException("Geçersiz mobil numara formatı. 5 ile başlamalıdır");
+		}
+		
 		return normalized;
 	}
 
@@ -239,5 +269,33 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	@Override
 	public SmsAuthCredentialProvider getCredentialProvider(KeycloakSession session) {
 		return (SmsAuthCredentialProvider) session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
+	}
+
+	private boolean isValidEmail(String email, AuthenticationFlowContext context) {
+		// Email format kontrolü
+		String emailRegex = "^[A-Za-z0-9+_.-]+@(.+)$";
+		Pattern pattern = Pattern.compile(emailRegex);
+		Matcher matcher = pattern.matcher(email);
+		
+		if (!matcher.matches()) {
+			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
+				context.form()
+					.setError("invalidEmailFormat")
+					.createForm("register-detail.ftl"));
+			return false;
+		}
+		
+		// Email'in başka bir kullanıcı tarafından kullanılıp kullanılmadığını kontrol et
+		UserModel existingUserWithEmail = context.getSession().users().getUserByEmail(context.getRealm(), email);
+			
+		if (existingUserWithEmail != null && !existingUserWithEmail.getId().equals(context.getUser().getId())) {
+			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
+				context.form()
+					.setError("emailAlreadyExists")
+					.createForm("register-detail.ftl"));
+			return false;
+		}
+		
+		return true;
 	}
 }
