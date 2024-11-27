@@ -4,15 +4,13 @@
 				 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>netzbegruenung</groupId>
-	<artifactId>keycloak-mfa-tools</artifactId>
+	<groupId>finance</groupId>
+	<artifactId>keycloak-finance-authenticator</artifactId>
 	<packaging>pom</packaging>
 	<version>26.0.6</version>
 
 	<modules>
-		<module>sms-authenticator</module>
-        <module>app-authenticator</module>
-		<module>enforce-mfa</module>
+		<module>finance-authenticator</module>
 	</modules>
 
 	<properties>
