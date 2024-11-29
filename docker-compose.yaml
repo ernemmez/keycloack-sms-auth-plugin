@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 
 services:
   postgres:
@@ -18,7 +18,7 @@ services:
     image: quay.io/keycloak/keycloak:24.0.5
     command: start-dev
     volumes:
-      - ./theme/keycloak-theme-for-kc-22-and-above.jar:/opt/keycloak/providers/keycloak-theme-for-kc-22-and-above.jar
+      # - ./theme/keycloak-theme-for-kc-22-and-above.jar:/opt/keycloak/providers/keycloak-theme-for-kc-22-and-above.jar
       - ./finance-authenticator/target/finance.finance-authenticator-v26.0.6.jar:/opt/keycloak/providers/finance.finance-authenticator-v26.0.6.jar
     environment:
       KC_HEALTH_ENABLED: true
