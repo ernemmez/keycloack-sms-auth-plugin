@@ -25,7 +25,7 @@
 			</form>
 
 			<!-- Yeniden Gönder Butonu -->
-			<div class="${properties.kcFormGroupClass!}" id="resendButtonContainer">
+			<div class="${properties.kcFormGroupClass!}" id="resendButtonContainer" style="display: none;">
 				<form id="kc-sms-resend-form" action="${url.loginAction}" method="post">
 					<input type="hidden" name="resend" value="true"/>
 					<button id="resendButton" 
@@ -38,31 +38,35 @@
 		</div>
 
 		<script>
-			document.addEventListener('DOMContentLoaded', function() {
-				const resendButtonContainer = document.getElementById('resendButtonContainer');
-				const countdown = document.getElementById('countdown');
-				const expirationTime = new Date().getTime() + (${ttl!"120"} * 1000);
-
-				resendButtonContainer.style.display = 'none';
+			const countdownScript = `
+				let minutes = ${minutes!'2'};
+				let seconds = ${seconds!'0'};
 
 				function updateCountdown() {
-					const now = new Date().getTime();
-					const timeLeft = expirationTime - now;
-
-					if (timeLeft <= 0) {
-						countdown.textContent = "${msg("smsAuthTimeExpired")}";
-						resendButtonContainer.style.display = 'block';
-						return;
-					}
-
-					const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-					const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-					countdown.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+					countdown.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
 				}
 
+				const countdown = document.getElementById('countdown');
+				const resendButtonContainer = document.getElementById('resendButtonContainer');
+				
 				updateCountdown();
-				const interval = setInterval(updateCountdown, 1000);
-			});
+				const countdownTimer = setInterval(() => {
+					if (seconds > 0) {
+							seconds--;
+					} else if (minutes > 0) {
+							minutes--;
+							seconds = 59;
+					} else {
+							clearInterval(countdownTimer);
+							// Süre bittiğinde butonu göster
+							resendButtonContainer.style.display = 'block';
+					}
+					updateCountdown();
+				}, 1000);
+			`;
+
+			// Script'i eval ile çalıştır
+			eval(countdownScript);
 		</script>
 	<#elseif section = "info" >
 		${msg("smsAuthInstruction")}

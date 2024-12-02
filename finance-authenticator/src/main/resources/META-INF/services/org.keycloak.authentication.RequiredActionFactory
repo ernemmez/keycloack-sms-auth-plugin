@@ -1,2 +1,3 @@
 netzbegruenung.keycloak.authenticator.PhoneNumberRequiredActionFactory
 netzbegruenung.keycloak.authenticator.PhoneValidationRequiredActionFactory
+netzbegruenung.keycloak.authenticator.PhoneVerifiedActionFactory
