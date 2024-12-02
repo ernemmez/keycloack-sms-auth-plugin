@@ -51,6 +51,18 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
+		// Yeniden gönderme isteği kontrolü
+		if (context.getHttpRequest().getDecodedFormParameters().containsKey("resend")) {
+			handleResendRequest(context);
+			return;
+		}
+		
+		// Mevcut kod doğrulama kontrolü
+		if (context.getHttpRequest().getDecodedFormParameters().containsKey("code")) {
+			handleOtpVerification(context);
+			return;
+		}
+		
 		// Form verilerini al
 		String formFirstName = context.getHttpRequest().getDecodedFormParameters().getFirst("firstName");
 		String formLastName = context.getHttpRequest().getDecodedFormParameters().getFirst("lastName");
@@ -71,12 +83,6 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 			// auth et akış biter
 			context.success();
-			return;
-		}
-
-		// OTP doğrulama kontrolü
-		if (context.getHttpRequest().getDecodedFormParameters().containsKey("code")) {
-			handleOtpVerification(context);
 			return;
 		}
 
@@ -243,10 +249,12 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 		SmsServiceFactory.get(config.getConfig()).send(phoneNumber, smsText);
 
-		// OTP giriş formuna yönlendir
+		// OTP giriş formuna yönlendir ve süre değerlerini ekle
 		context.challenge(context.form()
-				.setAttribute("realm", context.getRealm())
-				.createForm("login-sms.ftl"));
+			.setAttribute("realm", context.getRealm())
+			.setAttribute("minutes", Math.floorDiv(ttl, 60))  // Dakika değerini ekle
+			.setAttribute("seconds", ttl % 60)  // Saniye değerini ekle
+			.createForm("login-sms.ftl"));
 	}
 
 	@Override
@@ -306,5 +314,53 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		}
 
 		return true;
+	}
+
+	private void handleResendRequest(AuthenticationFlowContext context) {
+		AuthenticationSessionModel authSession = context.getAuthenticationSession();
+		String phoneNumber = authSession.getAuthNote("username");
+		
+		if (phoneNumber == null) {
+			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+				context.form()
+					.setError("smsAuthSessionExpired")
+					.createForm("login-sms.ftl"));
+			return;
+		}
+		
+		try {
+			// Yeni kod oluştur ve gönder
+			AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+			int ttl = Integer.parseInt(config.getConfig().get("ttl"));
+			int length = Integer.parseInt(config.getConfig().get("length"));
+			String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
+			
+			// Yeni kodu ve süresini kaydet
+			authSession.setAuthNote("code", code);
+			authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+			
+			// SMS gönder
+			KeycloakSession session = context.getSession();
+			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
+			Locale locale = session.getContext().resolveLocale(null);
+			String smsAuthText = theme.getMessages(locale).getProperty("smsAuthText");
+			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
+			
+			SmsServiceFactory.get(config.getConfig()).send(phoneNumber, smsText);
+			
+			// Başarılı gönderim sonrası formu göster
+			context.challenge(context.form()
+				.setAttribute("realm", context.getRealm())
+				.setAttribute("minutes", Math.floorDiv(ttl, 60))
+				.setAttribute("seconds", ttl % 60)
+				.setSuccess("smsResendSuccess")
+				.createForm("login-sms.ftl"));
+			
+		} catch (Exception e) {
+			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+				context.form()
+					.setError("smsAuthSendError")
+					.createForm("login-sms.ftl"));
+		}
 	}
 }

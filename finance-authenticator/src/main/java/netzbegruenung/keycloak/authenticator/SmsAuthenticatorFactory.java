@@ -1,25 +1,3 @@
-/*
- * Copyright 2016 Red Hat, Inc. and/or its affiliates
- * and other contributors as indicated by the @author tags.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
- * @author Netzbegruenung e.V.
- * @author verdigado eG
- * @author Niko Köbler, https://www.n-k.de, @dasniko
- */
-
 package netzbegruenung.keycloak.authenticator;
 
 import org.keycloak.Config;
@@ -73,7 +51,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 	public List<ProviderConfigProperty> getConfigProperties() {
 		return List.of(
 			new ProviderConfigProperty("length", "Code length", "The number of digits of the generated code.", ProviderConfigProperty.STRING_TYPE, 6),
-			new ProviderConfigProperty("ttl", "Time-to-live", "The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE, "300"),
+			new ProviderConfigProperty("ttl", "Time-to-live", "The number of minutes for the code to be valid.", ProviderConfigProperty.STRING_TYPE, "2"),
 			new ProviderConfigProperty("senderId", "SenderId", "The sender ID is displayed as the message sender on the receiving device.", ProviderConfigProperty.STRING_TYPE, "Keycloak"),
 			new ProviderConfigProperty("simulation", "Simulation mode", "In simulation mode, the SMS won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true),
 			new ProviderConfigProperty("countrycode", "Default country prefix", "Default country prefix that is assumed if user does not provide one.", ProviderConfigProperty.STRING_TYPE, "+49"),
