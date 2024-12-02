@@ -12,6 +12,7 @@
 					</div>
 					<div class="${properties.kcInputWrapperClass!}">
 						<input type="text" id="code" name="code" class="${properties.kcInputClass!}" autofocus required/>
+						<div id="countdown"></div>
 					</div>
 				</div>
 
@@ -24,64 +25,44 @@
 			</form>
 
 			<!-- Yeniden Gönder Butonu -->
-			<div class="${properties.kcFormGroupClass!}">
+			<div class="${properties.kcFormGroupClass!}" id="resendButtonContainer">
 				<form id="kc-sms-resend-form" action="${url.loginAction}" method="post">
 					<input type="hidden" name="resend" value="true"/>
 					<button id="resendButton" 
 							class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!}" 
-							type="submit" 
-							disabled>
+							type="submit">
 						${msg("smsAuthResend")}
 					</button>
 				</form>
-				<div id="timer" class="timer-text">
-					${msg("smsAuthTimeRemaining")}: <span id="countdown"></span>
-				</div>
 			</div>
 		</div>
 
 		<script>
-			let timerInterval;
-			
-			function startTimer(duration) {
-				clearInterval(timerInterval);
-				
-				let timer = duration;
+			document.addEventListener('DOMContentLoaded', function() {
+				const resendButtonContainer = document.getElementById('resendButtonContainer');
 				const countdown = document.getElementById('countdown');
-				const resendButton = document.getElementById('resendButton');
-				
-				function updateTimer() {
-					const minutes = Math.floor(timer / 60);
-					const seconds = timer % 60;
-					
-					const minutesStr = minutes < 10 ? '0' + minutes : minutes;
-					const secondsStr = seconds < 10 ? '0' + seconds : seconds;
-					
-					countdown.textContent = minutesStr + ':' + secondsStr;
+				const expirationTime = new Date().getTime() + (${ttl!"120"} * 1000);
 
-					if (--timer < 0) {
-						clearInterval(timerInterval);
+				resendButtonContainer.style.display = 'none';
+
+				function updateCountdown() {
+					const now = new Date().getTime();
+					const timeLeft = expirationTime - now;
+
+					if (timeLeft <= 0) {
 						countdown.textContent = "${msg("smsAuthTimeExpired")}";
-						resendButton.disabled = false;
+						resendButtonContainer.style.display = 'block';
+						return;
 					}
-				}
-				
-				updateTimer();
-				timerInterval = setInterval(updateTimer, 1000);
-			}
 
-			// Sayfa yüklendiğinde sayacı başlat
-			window.onload = function () {
-				const minutes = parseInt('${minutes!"2"}');
-				const seconds = parseInt('${seconds!"0"}');
-				const totalSeconds = (minutes * 60) + seconds;
-				startTimer(totalSeconds);
-				
-				document.getElementById('kc-sms-resend-form').addEventListener('submit', function() {
-					startTimer(totalSeconds);
-					document.getElementById('resendButton').disabled = true;
-				});
-			}
+					const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+					const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+					countdown.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+				}
+
+				updateCountdown();
+				const interval = setInterval(updateCountdown, 1000);
+			});
 		</script>
 	<#elseif section = "info" >
 		${msg("smsAuthInstruction")}

@@ -1,19 +1,37 @@
-# Finance Keycloak Plugins
+# Finance SMS OTP Authentication Plugin for Keycloak
 
-This repository contains the source code for a collection of Keycloak MFA plugins. The plugins are:
-* [SMS authenticator](sms-authenticator/README.md): Provides SMS as authentication step. SMS are sent via HTTP API, which can be configured. (production ready)
+This repository contains a Keycloak authentication plugin designed for SMS OTP (One-Time Password) verification flow in the Finance project. This plugin enables users to perform two-factor authentication (2FA) through SMS verification.
 
-The different plugins are documented in the submodules README. If you need support for deployment or adjustments, please contact [support@verdigado.com](mailto:support@verdigado.com).
+## Features
 
-## Development
-Run the Quarkus distribution in development mode for live reloading and debugging similar to: https://github.com/keycloak/keycloak/tree/main/quarkus#contributing
+- SMS OTP code delivery
+- Phone number verification and registration
+- Customizable SMS API integration
+- Multi-language support
+- reCAPTCHA integration
+- Phone number standardization in E164 format
+- Code resend functionality
+- Session duration management
 
-```shell
-mvn -f some_module/pom.xml compile quarkus:dev
-```
+## Overview
 
-Works great:)
-https://github.com/keycloak/keycloak/discussions/11841
+The plugin can send SMS messages via HTTP API and is compatible with various SMS providers. Users can complete SMS verification during initial registration or login, enhancing account security through two-factor authentication.
+
+## Technical Capabilities
+
+- Custom SMS templates
+- Multiple authentication flows
+- Phone number validation
+- Error handling and retry mechanisms
+- Session management
+- User attribute management
+- Configurable OTP length and validity period
+- Simulation mode for testing
+- Detailed logging and monitoring
+
+## Security
+
+This authentication plugin is specifically tailored for financial applications where security and user verification are crucial requirements.
 
 ## Building
 
@@ -23,6 +41,12 @@ https://github.com/keycloak/keycloak/discussions/11841
    ```shell
    mvn clean install
    ```
-   A file `target/netzbegruenung.keycloak-2fa-sms-authenticator.jar` should be created.
+   A file `target/finance.finance-authenticator-v26.0.6.jar` should be created.
 
 If building fails and the problem is caused or related to the dev module or tests, try to run `mvn clean install -DskipTests`.
+
+## Run The Demo
+To run the demo, start Docker Compose with the following command:
+```shell
+docker compose up
+```
