@@ -12,6 +12,7 @@ This repository contains a Keycloak authentication plugin designed for the SMS O
 - Phone number standardization in E164 format
 - Code resend functionality
 - Session duration management
+- Rate limiting
 
 ## Overview
 
