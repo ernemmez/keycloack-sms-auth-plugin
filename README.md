@@ -1,6 +1,6 @@
 # SMS OTP Authentication Plugin for Keycloak
 
-This repository contains a Keycloak authentication plugin designed for SMS OTP (One-Time Password) verification flow in the Finance project. This plugin enables users to perform two-factor authentication (2FA) through SMS verification.
+This repository contains a Keycloak authentication plugin designed for the SMS OTP (One Time Password) authentication flow in my own project. This plugin enables users to perform two-factor authentication (2FA) through SMS verification.
 
 ## Features
 
